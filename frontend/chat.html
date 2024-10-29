@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Room</title>
+    <link rel="stylesheet" href="css/chat.css">
+</head>
+<body>
+    <div class="chat-container">
+        <aside class="online-users">
+            <h2>Online Users</h2>
+            <ul id="userList"></ul>
+            <button id="logoutBtn">Logout</button> 
+        </aside>
+        <main class="chat-window">
+            <div class="messages" id="messageBox"></div>
+            <div class="message-input">
+                <input type="text" id="messageInput" placeholder="Type your message...">
+                <button id="sendMessageBtn">Send</button>
+            </div>
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="js/chat.js"></script>
+</body>
+</html>

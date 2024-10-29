@@ -23,11 +23,17 @@ document.querySelector('.form-box.login form').addEventListener('submit', async 
         });
         alert(response.data.message);
         if (response.data.success) {
-            window.location.href = '/dashboard';
-        }
+            console.log('Token received:', response.data.token);
+            localStorage.setItem('token', response.data.token);
+            console.log('Token saved to localStorage:', localStorage.getItem('token'));
+
+            window.location.href = '/chat.html';
+        } else {
+            console.error('Token not received in the response');
+        } 
     } catch (error) {
-        console.error('Login error:', error);
-        alert('Login failed, please try again.');
+        console.error('Login error:', error.response ? error.response.data : error);
+        alert(error.response && error.response.data ? error.response.data.message : 'Login failed, please try again.');
     }
 });
 
