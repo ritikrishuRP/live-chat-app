@@ -7,8 +7,6 @@ const sequelize = require('./utils/db');
 const chatRoutes = require('./routes/chat.route');
 const userRoutes = require('./routes/user.route');
 
-const authRoutes = require('./routes/user.route');
-
 dotenv.config();
 
 const app = express();

@@ -29,20 +29,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fetch chat messages
     async function loadMessages() {
+        let messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+        displayMessages(messages);
+
         try {
-            const response = await axios.get(`${apiUrl}/messages`, { headers: { Authorization: authHeader } });
-            const messages = response.data;
-            messageBox.innerHTML = messages
-                .map(msg => {
-                    // Check if msg.user is defined before accessing username
-                    const username = msg.user ? msg.user.username : "Unknown User";
-                    return `<p><strong>${username}:</strong> ${msg.content}</p>`;
-                })
-                .join('');
+            // Get timestamp of last message in local storage
+            const lastMessageTimestamp = messages.length ? messages[messages.length - 1].createdAt : null;
+            
+            // Fetch only new messages from the server
+            const response = await axios.get(`${apiUrl}/messages?since=${lastMessageTimestamp}`, {
+                headers: { Authorization: authHeader }
+            });
+
+            const newMessages = response.data;
+
+            if (newMessages.length) {
+                // Append new messages to the current list and limit to 10 messages
+                messages = [...messages, ...newMessages].slice(-10);
+                
+                // Save updated messages to local storage
+                localStorage.setItem('chatMessages', JSON.stringify(messages));
+
+                // Display all messages again
+                displayMessages(messages);
+            }
         } catch (error) {
             console.error('Error loading messages:', error);
         }
     }
+
+    // Display messages in the message box
+    function displayMessages(messages) {
+        messageBox.innerHTML = messages
+            .map(msg => {
+                const username = msg.user ? msg.user.username : "Unknown User";
+                return `<p><strong>${username}:</strong> ${msg.content}</p>`;
+            })
+            .join('');
+    }
+
 
     // Send a message
     sendMessageBtn.addEventListener('click', async () => {
