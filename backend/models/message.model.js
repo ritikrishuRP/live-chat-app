@@ -1,26 +1,23 @@
-// models/Message.js
-const Sequelize = require('sequelize');
-const sequelize = require('../utils/db');
-const User = require('./user.model');
+const sequelize = require('../utils/db')
 
-const Message = sequelize.define('Message', {
-    id: {
-        type: Sequelize.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
+const Sequelize = require('sequelize')
+
+const Message = sequelize.define('message' , {
+    id : {
+        type : Sequelize.INTEGER,
+        primaryKey : true,
+        autoIncrement : true,
+        allowNull : false
     },
-    content: {
-        type: Sequelize.TEXT,
-        allowNull: false
+    message : {
+        type : Sequelize.STRING,
+        allowNull : false
     },
-    timestamp: {
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.NOW
+    type : {
+        type : Sequelize.STRING,
+        allowNull : false,
+        defaultValue : "text"
     }
-});
-
-// Associate Message with User
-Message.belongsTo(User, { foreignKey: 'userId', as: 'user' });
-User.hasMany(Message, { foreignKey: 'userId' });
+})
 
 module.exports = Message;

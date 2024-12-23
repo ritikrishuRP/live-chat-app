@@ -1,27 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Room</title>
-    <link rel="stylesheet" href="css/chat.css">
+    <title>chat App</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <link rel="stylesheet" href="/css/chat-app.css">
 </head>
+
 <body>
-    <div class="chat-container">
-        <aside class="online-users">
-            <h2>Online Users</h2>
-            <ul id="userList"></ul>
-            <button id="logoutBtn">Logout</button> 
-        </aside>
-        <main class="chat-window">
-            <div class="messages" id="messageBox"></div>
-            <div class="message-input">
-                <input type="text" id="messageInput" placeholder="Type your message...">
-                <button id="sendMessageBtn">Send</button>
+    <!-- <h2>Chat App</h2> -->
+    <div class="display">
+        <div class="groups">
+            <div class="create-group">
+                <button id="create-grp">create group</button>
+                <div class="new-group hide">
+                    <form id="create-new-group">
+                        <label for="name">Create a new group</label>
+                        <input type="text" name="name" id="name" required>
+                        <button type="submit">New Group</button>
+                    </form>
+                </div>
             </div>
-        </main>
+            <div class="show-groups">
+
+            </div>
+            <div class="show-add-users hide">
+                <div>
+                    <label for="1">first</label>
+                    <input type="checkbox" id="1">
+                </div>
+            </div>
+
+        </div>
+        <div class="group-message">
+            <div class="hide header">
+                <h2>Chat App</h2>
+
+            </div>
+
+            <div class="hide messages">
+            </div>
+            <div class="hide send-messages">
+                <label class="switch">
+                    <input type="checkbox" id="toggleInput">
+                    <span class="slider round"></span>
+                  </label>
+                  
+                <form id="messsage">
+                    <input type="text" name="message" id="message" placeholder="Type your message here" required oninvalid="this.setCustomValidity('Enter message')" oninput="setCustomValidity('')">
+                    <button type="submit">send</button>
+                </form>
+                <form id="files" class="hide" enctype="multipart/form-data">
+                    <input type="file" name="file" id="file" required>
+                    <button type="submit">send</button>
+                </form>
+            </div>
+            <div class="users hide">
+                <button id="add-user-toggle-btn" class="hide">Add Users</button>
+                <div class="hide add-users">
+                    <label for="search">Enter email or name</label>
+                    <input type="text" name="search" id="search" placeholder="Enter email or name">
+                    <div class="display-users">
+
+                    </div>
+                </div>
+                <div class="hide show-users">
+
+                </div>
+            </div>
+        </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="js/chat.js"></script>
 </body>
+<script src="https://unpkg.com/axios@1.1.2/dist/axios.min.js"></script>
+<script type="module" src="/js/script.js"></script>
+
 </html>

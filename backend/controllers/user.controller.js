@@ -8,7 +8,7 @@ const OnlineUser = require('../models/onlineUser.model')
 
 // Handle signup
 exports.signup = async (req, res) => {
-    console.log('Received signup data:', req.body);  // Log incoming request data
+    // console.log('Received signup data:', req.body);  // Log incoming request data
     
     const { username, email, phone, password } = req.body;
 
@@ -75,7 +75,7 @@ exports.login = async (req, res) => {
 
 exports.logoutUser = async (req, res) => {
     const userId = req.user?.userId;  // Optional chaining to handle undefined req.user
-    console.log("UserId:", userId);    // Debugging line to check if userId is defined
+    // console.log("UserId:", userId);    // Debugging line to check if userId is defined
 
     if (!userId) {
         return res.status(400).json({ error: "User ID not found in request" });
