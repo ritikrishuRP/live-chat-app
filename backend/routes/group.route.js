@@ -9,5 +9,6 @@ router.get('/get-groups' , userAuthentication.authenticate  , groupController.ge
 router.get('/join-group/:groupId' , userAuthentication.authenticate  , groupController.joinGroup)
 router.get('/all-users/:groupId' , userAuthentication.authenticate  ,groupController.getUsers)
 router.get('/other-users' , userAuthentication.authenticate  , groupController.getOtherUsers)
+router.post('/get-group-users/:groupId' , userAuthentication.authenticate  , groupController.getGroupUsers)
 
 module.exports = router;

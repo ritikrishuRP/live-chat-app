@@ -1,4 +1,3 @@
-// models/OnlineUser.js
 const Sequelize = require('sequelize');
 const sequelize = require('../utils/db');
 const User = require('./user.model');

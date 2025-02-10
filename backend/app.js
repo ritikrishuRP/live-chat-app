@@ -37,6 +37,40 @@ app.use(cors());
 app.use(express.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
+// Handle WebSocket connections
+io.on('connection', (socket) => {
+  console.log('A user connected');
+
+  socket.on('sendMessage', (data) => {
+    try {
+      if (data && data.groupId) {
+        io.to(data.groupId).emit('receiveMessage', data);
+      } else {
+        console.error('Invalid message data:', data);
+      }
+    } catch (error) {
+      console.error('Error handling sendMessage:', error);
+    }
+  });
+
+  socket.on('joinGroup', (groupId) => {
+    try {
+      if (groupId) {
+        socket.join(groupId);
+        console.log(`User joined group ${groupId}`);
+      } else {
+        console.error('Invalid groupId:', groupId);
+      }
+    } catch (error) {
+      console.error('Error handling joinGroup:', error);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
+});
+
 // Define database relationships
 User.belongsToMany(Group, { through: Member });
 Group.belongsToMany(User, { through: Member });
@@ -59,59 +93,6 @@ app.use('/user', userRoutes);
 app.use('/message', messageRoutes);
 app.use('/group', groupRoutes);
 app.use('/admin', adminRoutes);
-
-// Socket.IO Middleware
-const { socketAuthenticate } = require('./middleware/auth');
-
-io.use(async (socket, next) => {
-  console.log(`Socket.IO middleware: Authenticating socket ID ${socket.id}`);
-  try {
-    await socketAuthenticate(socket, next); // Authenticate socket connection
-    console.log(`Socket.IO middleware: Authentication successful for socket ID ${socket.id}`);
-  } catch (err) {
-    console.error(`Socket.IO middleware: Authentication failed for socket ID ${socket.id} - Error: ${err.message}`);
-    next(err);
-  }
-});
-
-// Handle Socket.IO Connections
-io.on('connection', (socket) => {
-  console.log(`A user connected: ${socket.id}`);
-
-  // Confirm connection
-  socket.emit('connectionSuccess', { message: 'You are successfully connected to the server!', socketId: socket.id });
-
-  // Join hardcoded group (to match client-side logic)
-  const hardcodedGroupId = 'd5767f79-5d91-46b6-a355-d2bb4dfeb919';
-  socket.join(hardcodedGroupId);
-  console.log(`Socket ${socket.id} joined group ${hardcodedGroupId}`);
-
-  // Emit groupJoined event
-  socket.emit('groupJoined', { groupId: hardcodedGroupId, socketId: socket.id });
-
-  // Listen for send-message events
-  socket.on('message:send-message', (data) => {
-    console.log(`Message sent to group ${data.groupId}:`, data.message);
-    io.to(data.groupId).emit('message:receive-message', {
-      message: data.message,
-      sender: socket.user?.username || 'Unknown',
-      groupId: data.groupId,
-    });
-  });
-  
-
-  // Hardcoded message emit to test client behavior
-  socket.emit('message:receive-message', {
-    message: 'Test message',
-    sender: 'Server',
-    groupId: hardcodedGroupId,
-  });
-
-  // Handle disconnection
-  socket.on('disconnect', () => {
-    console.log(`A user disconnected: ${socket.id}`);
-  });
-});
 
 // Sync database and start the server
 sequelize

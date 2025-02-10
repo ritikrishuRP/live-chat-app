@@ -100,3 +100,42 @@ exports.getUsers = async(req,res)=>{
     
     }
 }
+
+
+
+// Controller to fetch group users
+exports.getGroupUsers = async (req, res) => {
+  try {
+    const groupId = req.params.groupId;
+    const lastFetchedUserId = req.query.id || 0; // Default to 0 if no `id` is provided
+
+    // Check if the group exists
+    const group = await Group.findByPk(groupId);
+    if (!group) {
+      return res.status(404).json({ msg: 'Group does not exist' });
+    }
+
+    // Check if the requesting user is part of the group
+    const userGroups = await req.user.getGroups({ where: { id: groupId } });
+    if (userGroups.length === 0) {
+      return res.status(403).json({ msg: 'You are not part of this group' });
+    }
+
+    // Fetch users in the group with `id > lastFetchedUserId`
+    const groupUsers = await group.getUsers({
+      where: {
+        id: {
+          [Op.gt]: lastFetchedUserId,
+        },
+      },
+      attributes: ['id', 'username', 'email'], // Exclude sensitive data like password
+    });
+
+    return res.status(200).json(groupUsers);
+  } catch (error) {
+    console.error('Error fetching group users:', error);
+    return res.status(500).json({ success: false, msg: 'Internal server error' });
+  }
+};
+
+

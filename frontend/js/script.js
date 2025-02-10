@@ -1,18 +1,6 @@
 const token = localStorage.getItem('token');
 const authHeader = `Bearer ${token}`;
 
-const socket = io('http://localhost:8000', {
-  auth: { token }, // Pass the token
-});
-
-socket.on('connect', () => {
-  console.log('Connected to the server');
-});
-
-socket.on('connect_error', (err) => {
-  console.error('Connection error:', err.message);
-});
-
 const messages = document.querySelector('.messages');
 let rendered = false;
 const groups = document.querySelector('.show-groups');
@@ -22,30 +10,24 @@ const users = document.querySelector('.show-users');
 const displayUsers = document.querySelector('.display-users');
 var otherUsers = null;
 
+const socket = io('http://localhost:8000');
+
 async function renderElemets() {
-    // if (!localStorage.getItem('token')) {
-    //   window.location = 'chat.html';
-    // }
 
     console.log('Rendering elements...');
-    socket.on('connect', () => {
-      console.log('Socket connected:', socket);
-    });
 
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
     if (id) {
-      // console.log("Group ID present:", id);
       const group = await axios.get(`http://localhost:8000/group/join-group/${id}`, { headers: { Authorization: authHeader } });
       showGroups(group.data.group);
     }
 
     const res = await axios.get('http://localhost:8000/group/get-groups', { headers: { Authorization: authHeader } });
-    // console.log("Groups fetched:", res.data);
+
     res.data.forEach(group => {
       if (group.id !== id) showGroups(group);
     });
-    // window.location = 'chat.html';
   
 }
 
@@ -67,7 +49,6 @@ function showGroups(group) {
     e.stopPropagation();
     const link = `http://localhost:8000/?id=${group.id}`;
     navigator.clipboard.writeText(link);
-    // console.log('Group link copied:', link);
   };
 
   div.onclick = async () => {
@@ -86,37 +67,15 @@ function showGroups(group) {
   };
 
   groups.appendChild(div);
-  socket.on('message:receive-message', (data) => {
-    console.log('Received new message:', data);
-    console.log('Hiii');
-    
-    if (!curr_group || !curr_group.id) {
-      console.warn('No current group selected. Ignoring message.');
-      return;
-    }
-    console.log('Hello');
-    console.log('Current group ID:', curr_group.id);
-    console.log('Message group ID:', data.groupId);
-  
-    if (data.groupId === curr_group.id) {
-      const messageContainer = document.querySelector('.messages');
-      const messageElement = document.createElement('div');
-      messageElement.innerText = `${data.sender}: ${data.message}`;
-      messageContainer.appendChild(messageElement);
-  
-      messageContainer.scrollTop = messageContainer.scrollHeight;
-    }
-  });
 }
 
-// console.log(curr_group.id);
 
 
 
 
 function showMessage(data, users) {
-  // console.log("Checking message groupId:", data.groupId, "Current groupId:", curr_group.id); // Add logging
-  if (data.groupId !== curr_group.id) return; // Skip messages from other groups
+  console.log('message showed up');
+  if (data.groupId !== curr_group.id) return;
 
   const id = curr_group.member.id;
   const div = document.createElement('div');
@@ -143,79 +102,51 @@ async function sendMessage(e) {
   try {
     e.preventDefault();
     const groupId = curr_group.id;
+    const message = e.target.message.value;
     const data = {
-      message: e.target.message.value,
+      message,
       groupId,
+      memberId: curr_group.member.id
     };
+    console.log('message sent')
 
-    // Emit message through socket
-    socket.emit('message:send-message', data, () => {
-        console.log("Message sent:", data);  // Add logging to confirm data being sent
-        const div = document.createElement('div');
-        div.className = 'u-message';
-        div.textContent = "You: " + data.message;
-        messages.appendChild(div);
-        e.target.message.value = ''; // Clear the input field
-        scrollToBottom();
-      });
+    // Emit the message event to the server
+    socket.emit('sendMessage', data);
 
-    const res = await axios.post('http://localhost:8000/message/add-message', data,{ headers: { Authorization: authHeader } })
+   // Wait for the server response to confirm the message was received/stored
+  const res = await axios.post('http://localhost:8000/message/add-message', data,{ headers: { Authorization: authHeader } })
   console.log(res)
+
+  // Update the UI after a successful server response
   const div = document.createElement('div')
   div.className = 'u-message'
   div.textContent = "You: " + data.message
   messages.appendChild(div)
+  showMessage(data, [{ member: { id: curr_group.member.id, username: 'You' }}]);
   e.target.message.value = ''
   scrollToBottom()
 
-     
+
+  console.log(curr_group.id);   
       
   } catch (e) {
     console.log('Error sending message:', e);
   }
-}
-
-// console.log(curr_group.id)
-// Inside your front-end script.js or equivalent
-// socket.on('message:receive-message', (data) => {
-//     console.log('Received new message:', data);
-//     console.log('Current group ID:', curr_group.id);
-//     console.log('Message group ID:', data.groupId);
-  
-//     if (data.groupId === curr_group.id) {
-//       const messageContainer = document.querySelector('.messages');
-//       const messageElement = document.createElement('div');
-//       messageElement.innerText = `${data.sender}: ${data.message}`;
-//       messageContainer.appendChild(messageElement);
-  
-//       messageContainer.scrollTop = messageContainer.scrollHeight;
-//     }
-//   });
-  
-
- 
-  
-
-  
-  
-  
+}  
 
 document.getElementById('create-new-group').addEventListener('submit', createNewGroup);
 
 async function createNewGroup(e) {
   try {
     e.preventDefault();
-    // console.log(e.target.name.value);
     const selectedUsers = [];
     otherUsers.forEach(user => {
       if (document.getElementById(user.id).checked) {
-        // console.log(user.name);
         selectedUsers.push(user.id);
       }
     });
     const group = await axios.post('http://localhost:8000/group/create', { "name": e.target.name.value, selectedUsers }, { headers: { Authorization: authHeader } });
 
-    // console.log('Created group:', group);
     e.target.name.value = '';
     showGroups(group.data.group);
 
@@ -234,20 +165,19 @@ document.getElementById('create-grp').addEventListener('click', async () => {
   if (document.querySelector('.new-group').classList.contains('hide')) {
     document.querySelector('.new-group').classList.remove('hide');
     const res = await axios.get('http://localhost:8000/group/other-users', { headers: { Authorization: authHeader } });
-    // console.log('Fetched other users:', res);
     const addUsers = document.querySelector('.show-add-users');
     document.querySelector('.show-groups').classList.add('hide');
     addUsers.classList.remove('hide');
     addUsers.innerHTML = ``;
     otherUsers = res.data;
     res.data.forEach(user => {
-      // console.log(user);
       const div = document.createElement('div');
 
       const label = document.createElement('label');
       label.for = user.id;
       label.textContent = user.username;
-
+      console.log(user.username);
+      console.log(user.id);
       const input = document.createElement('input');
       input.id = user.id;
       input.name = user.id;
@@ -268,35 +198,16 @@ document.getElementById('create-grp').addEventListener('click', async () => {
   }
 });
 
-// socket.emit('message:send-message', { groupId, message: 'Hello' });
-
 
 async function showGroupMessages() {
   try {
-    // console.log('Fetching group messages for group:', curr_group);
     const group = curr_group;
+    socket.emit('joinGroup', group.id);
 
-    // Join the group room on the socket
-    socket.emit('join-room', group.id, (groupMessages, id, groupUsers) => {
-      console.log(socket.id);
-      console.log('Group joined. Messages:', groupMessages);
-      // Display the initial messages when joining
-      console.log(`Socket ${socket.id} is joining group: ${group.id}`);
-  
-  console.log(socket.rooms);
-      groupMessages.forEach(message => {
-        showMessage(message, groupUsers);
-      });
+     // Prevent multiple event listeners
+     socket.off('receiveMessage');
 
-      // Scroll to bottom
-      scrollToBottom();
-
-      // Display group users
-      groupUsers.forEach(user => {
-        showUser(user);
-      });
-    });
-   
+     console.log('Showing group messages...');
 
     let final_messages = JSON.parse(localStorage.getItem(`message-${group.id}`)) || [];
     let final_users = JSON.parse(localStorage.getItem(`user-${group.id}`)) || [];
@@ -310,9 +221,6 @@ async function showGroupMessages() {
     const res = await axios.get(`http://localhost:8000/message/get-messages/${group.id}/?messageId=${mId}`, { headers: { Authorization: authHeader } });
     const res2 = await axios.get(`http://localhost:8000/group/all-users/${group.id}/?id=${uId}`, { headers: { Authorization: authHeader } });
 
-    // console.log('Messages and users:', res, res2);
-
-    // Clear existing messages in the UI
     messages.innerHTML = ``;
     final_messages = [...final_messages, ...res.data.messages];
     document.querySelector('.group-message h2').textContent = group.name;
@@ -323,13 +231,30 @@ async function showGroupMessages() {
         showMessage(message, final_users);
       }
     });
+    users.innerHTML = ``
 
-    // Store the updated messages and users
+
+    final_users.forEach(user => {
+        showUser(user)
+    });
     localStorage.setItem(`message-${curr_group.id}`, JSON.stringify(final_messages));
-localStorage.setItem(`user-${curr_group.id}`, JSON.stringify(final_users));
-// console.log("Stored messages and users:", final_messages, final_users);
+    localStorage.setItem(`user-${curr_group.id}`, JSON.stringify(final_users));
 
-
+    const res3 = await axios.post(`http://localhost:8000/group/get-group-users/${group.id}`, null, { headers: { Authorization: authHeader } });
+    
+    console.log(res3)
+        displayUsers.innerHTML = ``
+        res3.data.forEach(user => {
+            addUser(user)
+        })
+      // Listen for new messages
+      socket.on('receiveMessage', (data) => {
+        if (data.groupId === group.id) {
+          showMessage(data, final_users);
+          scrollToBottom();
+        }
+      });
+    scrollToBottom();
   } catch (e) {
     console.log('Error showing group messages:', e);
   }
@@ -338,15 +263,12 @@ localStorage.setItem(`user-${curr_group.id}`, JSON.stringify(final_users));
 
 function showFiles(data, users) {
     const id = curr_group.member.id
-    // const users = localStorage.getItem(`user-${curr_group.id}`)
     const div = document.createElement('div')
-    // console.log(typeof users)
     if (id == data.memberId) {
         div.className = 'u-message u-multi'
         div.textContent = "You"
     } else {
         const user = users.find(user => data.memberId == user.member.id)
-        // console.log(user)
         if (user) {
             div.className = 'o-message o-multi'
             div.textContent = user.username
@@ -354,8 +276,6 @@ function showFiles(data, users) {
         } else {
             return;
         }
-
-
     }
     if (data.type.startsWith('image')) {
         const img = document.createElement('img')
@@ -376,10 +296,12 @@ function showFiles(data, users) {
 
 function showUser(user) {
     const member = curr_group.member;
-    // console.log(member);
-    // console.log(user);
+    console.log(member)
+    console.log(user)
     const div = document.createElement('div');
     div.textContent = user.username;
+    console.log('Show User..')
+    console.log(user.username);
 
     div.className = 'curr_user';
 
@@ -392,15 +314,16 @@ function showUser(user) {
 
     if (user.member.id !== member.id && member.admin) {
         const btns = document.createElement('div');
-        // console.log(user.member.id + " : " + member.id);
         const makeAdmin = document.createElement('button');
         makeAdmin.textContent = 'Make Admin';
 
         const removeAdmin = document.createElement('button');
         removeAdmin.textContent = 'Remove Admin';
 
-        if (user.member.admin) makeAdmin.classList.add('hide');
-        else removeAdmin.classList.add('hide');
+        if (user.member.admin)
+           makeAdmin.classList.add('hide')
+        else 
+           removeAdmin.classList.add('hide');
 
         // Ensure final_users is fetched here
         let final_users = JSON.parse(localStorage.getItem(`user-${curr_group.id}`)) || [];
@@ -409,14 +332,14 @@ function showUser(user) {
             try {
                 const res = await axios.post(`http://localhost:8000/admin/make-admin/${curr_group.id}`, { "userId": user.id }, { headers: { Authorization: authHeader } });
                 final_users = final_users.map(elem => {
-                    // console.log(elem);
+                  console.log(elem)
                     if (elem.member.userId === user.id) {
                         elem.member.admin = true;
                     }
                     return elem;
                 });
                 localStorage.setItem(`user-${curr_group.id}`, JSON.stringify(final_users));
-                // console.log(res);
+                console.log(res);
             } catch (e) {
                 console.log(e);
             }
@@ -425,7 +348,7 @@ function showUser(user) {
         removeAdmin.onclick = async () => {
             try {
                 const res = await axios.post(`http://localhost:8000/admin/remove-admin/${curr_group.id}`, { "userId": user.id }, { headers: { Authorization: authHeader } });
-                // console.log(res);
+                console.log(res);
                 final_users = final_users.map(elem => {
                     if (elem.member.userId === user.id) {
                         elem.member.admin = false;
@@ -441,43 +364,29 @@ function showUser(user) {
         const removeUser = document.createElement('button');
         removeUser.textContent = 'Remove User';
 
-        removeUser.onclick = async () => {
-            try {
-                const res = await axios.post(
-                    `http://localhost:8000/admin/remove-member/${curr_group.id}`,
-                    { "userId": user.id },
-                    { headers: { Authorization: authHeader } }
-                );
-        
-                // Fetch the updated list of users from localStorage
-                let final_users = JSON.parse(localStorage.getItem(`user-${curr_group.id}`)) || [];
-                // console.log("Before removal:", final_users);
+      removeUser.onclick = async () => {
+    if (confirm("Are you sure you want to remove this user?")) {
+        try {
+            const res = await axios.post(
+                `http://localhost:8000/admin/remove-member/${curr_group.id}`,
+                { "userId": user.id },
+                { headers: { Authorization: authHeader } }
+            );
 
-                // console.log("User ID to remove:", user.id);
-        
-                // Filter out the user to remove from final_users
-                final_users = final_users.filter(elem => elem.id !== user.id);
+            // Update localStorage immediately
+            let final_users = JSON.parse(localStorage.getItem(`user-${curr_group.id}`)) || [];
+            final_users = final_users.filter(elem => elem.id !== user.id);
+            localStorage.setItem(`user-${curr_group.id}`, JSON.stringify(final_users));
 
-                
+            // Update the UI
+            users.removeChild(div);
+            console.log("User removed successfully.");
+        } catch (e) {
+            console.error("Error removing user:", e);
+        }
+    }
+};
 
-        
-                // Log to check if the user was removed
-                console.log("After removal:", final_users);
-        
-                // Store the updated users list back into localStorage
-                localStorage.setItem(`user-${curr_group.id}`, JSON.stringify(final_users));
-        
-                // Log success
-                console.log("User removed and localStorage updated");
-        
-                // Update UI
-                addUser(user); // This should handle updating the UI accordingly
-                users.removeChild(div); // This removes the user from the displayed list
-            } catch (e) {
-                console.log("Error removing user:", e);
-            }
-        };
-        
         
 
         btns.appendChild(makeAdmin);
@@ -493,6 +402,7 @@ function showUser(user) {
 
 
 document.querySelector('.header').addEventListener('click', () => {
+  console.log('Group header clicked');
     const message = document.querySelector('.messages')
     const sendMessages = document.querySelector('.send-messages')
     const users = document.querySelector('.show-users')
@@ -530,38 +440,58 @@ document.getElementById('add-user-toggle-btn').addEventListener('click', () => {
     }
 })
 
+
 function addUser(user) {
-    // console.log(user)
-    const div = document.createElement('div')
-    div.className = 'add-user group-items'
-    div.textContent = `Name : ${user.username} Email : ${user.email}`
+  console.log(user);
 
+  const div = document.createElement('div');
+  div.className = 'add-user group-items';
+  div.textContent = `Name : ${user.username} Email : ${user.email}`;
 
-    const btn = document.createElement('button')
-    btn.textContent = 'Add User'
+  const btn = document.createElement('button');
+  btn.textContent = 'Add User';
 
-    btn.onclick = async () => {
-        try {
-            // console.log(curr_group)
- 
-            const res = await axios.post(`http://localhost:8000/admin/add-user/${curr_group.id}`, {
-                id: user.id
-            },  { headers: { Authorization: authHeader } })
-            // console.log(res)
-            displayUsers.removeChild(div)
-            const show_user = res.data.user
-            show_user.member = res.data.user[0]
-            showUser(show_user)
-        } catch (e) {
-            console.log(e)
-        }
-    }
+  btn.onclick = async () => {
+      try {
+          console.log(curr_group);
 
+          // Make the API request to add the user to the group
+          const res = await axios.post(
+              `http://localhost:8000/admin/add-user/${curr_group.id}`,
+              { id: user.id },
+              { headers: { Authorization: authHeader } }
+          );
 
-    div.appendChild(btn)
+          console.log('Response:', res);
 
-    displayUsers.appendChild(div)
+          // Check if the API response contains the expected data
+          if (!res.data || !res.data.user) {
+              console.error('Unexpected response format:', res.data);
+              return;
+          }
+
+          // Remove the user from the "add-user" list
+          displayUsers.removeChild(div);
+
+          // Get the user details from the response
+          const show_user = res.data.user;
+
+          // Add any additional properties to the user object if needed
+          show_user.member = res.data.member || {}; // Provide default if `member` is missing
+
+          // Display the user in the UI
+          showUser(show_user);
+      } catch (e) {
+          console.error('Error adding user:', e);
+      }
+  };
+
+  div.appendChild(btn);
+
+  // Add the user element to the display
+  displayUsers.appendChild(div);
 }
+
 
 document.getElementById('search').addEventListener('keyup', (e) => {
     const text = e.target.value
@@ -589,12 +519,9 @@ document.getElementById('files').addEventListener('submit', async (e) => {
     try {
         const group = curr_group
         e.preventDefault()
-        // console.log('clicked')
-        // console.log(e.target.file.files) 
         const formData = new FormData(document.getElementById('files'))
 
         const res = await axios.post(`http://localhost:8000/message/upload-file/${group.id}`, formData,  { headers: { Authorization: authHeader } })
-        // console.log(res)
         const div = document.createElement('div')
         div.className = 'u-message u-multi'
         div.textContent = "You"
@@ -621,9 +548,3 @@ document.getElementById('files').addEventListener('submit', async (e) => {
 
 })
 
-// setTimeout(() => {
-//     const testMessage = { groupId: curr_group.id, sender: 'Test User', message: 'Test Message' };
-//     console.log('Simulating message reception');
-//     showMessage(testMessage, []);  // Use an empty array or mock user data
-//   }, 2000);
-  

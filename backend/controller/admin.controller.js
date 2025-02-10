@@ -122,22 +122,58 @@ exports.showUser = async(req,res)=>{
     }
 }
 
-exports.addUser = async(req,res)=>{
-    try{
+// exports.addUser = async(req,res)=>{
+//     try{
+//         const groupId = req.params.groupId;
+//         const groups = await req.user.getGroups({where : {id : groupId}})
+//         const group = groups[0]
+//         const member = group.member
+//         const id = req.body.id
+//         if(member.admin){
+//             const user = await User.findByPk(id)
+//             const newUser = await group.addUser(user)
+//             return res.json({user : newUser , msg :"New User added successfully"})
+//         }else{
+//             return res.json({msg :"You don't have the required permissions"})
+//         }
+//     }catch(e){
+//         console.log(e)
+//         return res.status(500).json({success : false , msg :"Internal server error"})
+//     }
+// }
+
+exports.addUser = async (req, res) => {
+    try {
         const groupId = req.params.groupId;
-        const groups = await req.user.getGroups({where : {id : groupId}})
-        const group = groups[0]
-        const member = group.member
-        const id = req.body.id
-        if(member.admin){
-            const user = await User.findByPk(id)
-            const newUser = await group.addUser(user)
-            return res.json({user : newUser , msg :"New User added successfully"})
-        }else{
-            return res.json({msg :"You don't have the required permissions"})
+        const groups = await req.user.getGroups({ where: { id: groupId } });
+        const group = groups[0];
+        const member = group.member;
+        const id = req.body.id;
+
+        if (member.admin) {
+            const user = await User.findByPk(id);
+
+            if (!user) {
+                return res.status(404).json({ msg: "User not found" });
+            }
+
+            // Add the user to the group
+            await group.addUser(user);
+
+            // Return the complete user details
+            return res.json({ 
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                }, 
+                msg: "New User added successfully" 
+            });
+        } else {
+            return res.status(403).json({ msg: "You don't have the required permissions" });
         }
-    }catch(e){
-        console.log(e)
-        return res.status(500).json({success : false , msg :"Internal server error"})
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ success: false, msg: "Internal server error" });
     }
-}
+};
