@@ -8,6 +8,8 @@ const sequelize = require('./utils/db');
 const { Server } = require('socket.io');
 const http = require('http');
 
+// require('dotenv').config();
+
 // Routes
 const userRoutes = require('./routes/user.route');
 const groupRoutes = require('./routes/group.route');
@@ -22,6 +24,7 @@ const Member = require('./models/member.model');
 
 // Environment variables
 dotenv.config();
+// console.log('DB Port:', process.env.DB_PORT);
 
 const app = express();
 const server = http.createServer(app); // Create HTTP server for Socket.IO
